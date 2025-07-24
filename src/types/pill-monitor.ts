@@ -1,7 +1,15 @@
+export interface Medicine {
+  id: string;
+  name: string;
+  count: number;
+}
+
 export interface PillData {
-  pillBreakfast: number;
-  pillLunch: number;
-  pillDinner: number;
+  medicines: {
+    breakfast: Medicine[];
+    lunch: Medicine[];
+    dinner: Medicine[];
+  };
   alarmBreakfast: number;
   alarmLunch: number;
   alarmDinner: number;

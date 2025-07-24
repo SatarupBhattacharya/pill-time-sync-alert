@@ -20,7 +20,10 @@ const Dashboard = () => {
     setNotificationSettings,
     isConnected,
     lastSync,
-    updatePillCount,
+    addMedicine,
+    removeMedicine,
+    updateMedicineCount,
+    updateAllMedicinesForDose,
     updateAlarmTime,
     syncWithESP,
     checkForAlerts,
@@ -148,29 +151,32 @@ const Dashboard = () => {
       <div className="grid gap-6 md:grid-cols-3">
         <PillCard
           dose="breakfast"
-          count={pillData.pillBreakfast}
+          medicines={pillData.medicines.breakfast}
           alarmTime={pillData.alarmBreakfast}
-          onIncrement={() => updatePillCount('breakfast', true)}
-          onDecrement={() => updatePillCount('breakfast', false)}
           onTimeClick={() => handleTimeClick('breakfast')}
+          onAddMedicine={(name) => addMedicine('breakfast', name)}
+          onRemoveMedicine={(id) => removeMedicine('breakfast', id)}
+          onUpdateMedicineCount={(id, increment) => updateMedicineCount('breakfast', id, increment)}
         />
         
         <PillCard
           dose="lunch"
-          count={pillData.pillLunch}
+          medicines={pillData.medicines.lunch}
           alarmTime={pillData.alarmLunch}
-          onIncrement={() => updatePillCount('lunch', true)}
-          onDecrement={() => updatePillCount('lunch', false)}
           onTimeClick={() => handleTimeClick('lunch')}
+          onAddMedicine={(name) => addMedicine('lunch', name)}
+          onRemoveMedicine={(id) => removeMedicine('lunch', id)}
+          onUpdateMedicineCount={(id, increment) => updateMedicineCount('lunch', id, increment)}
         />
         
         <PillCard
           dose="dinner"
-          count={pillData.pillDinner}
+          medicines={pillData.medicines.dinner}
           alarmTime={pillData.alarmDinner}
-          onIncrement={() => updatePillCount('dinner', true)}
-          onDecrement={() => updatePillCount('dinner', false)}
           onTimeClick={() => handleTimeClick('dinner')}
+          onAddMedicine={(name) => addMedicine('dinner', name)}
+          onRemoveMedicine={(id) => removeMedicine('dinner', id)}
+          onUpdateMedicineCount={(id, increment) => updateMedicineCount('dinner', id, increment)}
         />
       </div>
 
@@ -186,19 +192,24 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold text-primary">
-                {pillData.pillBreakfast + pillData.pillLunch + pillData.pillDinner}
+                {pillData.medicines.breakfast.reduce((sum, med) => sum + med.count, 0) + 
+                 pillData.medicines.lunch.reduce((sum, med) => sum + med.count, 0) + 
+                 pillData.medicines.dinner.reduce((sum, med) => sum + med.count, 0)}
               </div>
               <div className="text-sm text-muted-foreground">Total Pills</div>
             </div>
             
             <div>
-              <div className="text-2xl font-bold text-success">3</div>
-              <div className="text-sm text-muted-foreground">Daily Doses</div>
+              <div className="text-2xl font-bold text-success">
+                {pillData.medicines.breakfast.length + pillData.medicines.lunch.length + pillData.medicines.dinner.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Medicines</div>
             </div>
             
             <div>
               <div className="text-2xl font-bold text-medical-blue">
-                {[pillData.pillBreakfast, pillData.pillLunch, pillData.pillDinner].filter(count => count < 3).length}
+                {[...pillData.medicines.breakfast, ...pillData.medicines.lunch, ...pillData.medicines.dinner]
+                  .filter(med => med.count < 3).length}
               </div>
               <div className="text-sm text-muted-foreground">Low Stock</div>
             </div>
