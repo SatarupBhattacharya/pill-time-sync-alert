@@ -91,7 +91,9 @@ const Dashboard = () => {
           <img src={pillMonitorIcon} alt="Pill Monitor" className="h-10 w-10" />
           <div>
             <h1 className="text-2xl font-bold text-primary">Pill Monitor</h1>
-            <p className="text-sm text-muted-foreground">Smart Medicine Tracker</p>
+            <p className="text-sm text-muted-foreground">
+              {userProfile.name ? `Patient: ${userProfile.name}` : 'Smart Medicine Tracker'}
+            </p>
           </div>
         </div>
         
@@ -114,13 +116,17 @@ const Dashboard = () => {
             <Settings className="h-4 w-4" />
           </Button>
           
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setProfileDialogOpen(true)}
-          >
-            <User className="h-4 w-4" />
-          </Button>
+           <Button
+             variant="outline"
+             size="sm"
+             onClick={() => setProfileDialogOpen(true)}
+             className="gap-2"
+           >
+             <User className="h-4 w-4" />
+             <span className="hidden sm:inline">
+               {userProfile.name ? 'Edit Patient' : 'Add Patient'}
+             </span>
+           </Button>
         </div>
       </div>
 
@@ -132,8 +138,8 @@ const Dashboard = () => {
         isLoading={isLoading}
       />
 
-      {/* Welcome Card */}
-      {userProfile.name && (
+      {/* Welcome Card or Patient Setup Prompt */}
+      {userProfile.name ? (
         <Card className="bg-gradient-medical text-white border-0 shadow-medical">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
@@ -142,6 +148,24 @@ const Dashboard = () => {
                 <h2 className="text-xl font-semibold">Welcome back, {userProfile.name}!</h2>
                 <p className="text-white/90">Stay on track with your medication schedule.</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-2 border-dashed border-primary/20 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <User className="h-8 w-8 text-primary" />
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-primary">Set Up Patient Profile</h2>
+                <p className="text-muted-foreground">Add patient details to personalize the medication tracking experience.</p>
+              </div>
+              <Button 
+                onClick={() => setProfileDialogOpen(true)}
+                className="ml-auto"
+              >
+                Add Patient Details
+              </Button>
             </div>
           </CardContent>
         </Card>

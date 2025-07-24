@@ -28,69 +28,71 @@ export const UserProfileDialog = ({ open, onOpenChange, profile, onSave }: UserP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>User Profile</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-primary">Patient Details</DialogTitle>
+          <p className="text-sm text-muted-foreground">Manage patient information and emergency contacts</p>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="name" className="text-sm font-medium">Patient Name *</Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Enter your full name"
+              placeholder="Enter patient's full name"
+              className="border-2"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="age">Age</Label>
+            <Label htmlFor="age" className="text-sm font-medium">Age</Label>
             <Input
               id="age"
               type="number"
               value={formData.age || ''}
               onChange={(e) => handleChange('age', parseInt(e.target.value) || 0)}
-              placeholder="Enter your age"
+              placeholder="Enter patient's age"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
             <Input
               id="email"
               type="email"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
-              placeholder="Enter your email"
+              placeholder="Enter patient's email"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
             <Input
               id="phone"
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
-              placeholder="Enter your phone number"
+              placeholder="Enter patient's phone number"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="doctor">Doctor's Name</Label>
+            <Label htmlFor="doctor" className="text-sm font-medium">Primary Doctor</Label>
             <Input
               id="doctor"
               value={formData.doctorName}
               onChange={(e) => handleChange('doctorName', e.target.value)}
-              placeholder="Enter your doctor's name"
+              placeholder="Enter primary doctor's name"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="emergency">Emergency Contact</Label>
+            <Label htmlFor="emergency" className="text-sm font-medium">Emergency Contact</Label>
             <Input
               id="emergency"
               value={formData.emergencyContact}
               onChange={(e) => handleChange('emergencyContact', e.target.value)}
-              placeholder="Enter emergency contact"
+              placeholder="Name and phone of emergency contact"
             />
           </div>
         </div>
