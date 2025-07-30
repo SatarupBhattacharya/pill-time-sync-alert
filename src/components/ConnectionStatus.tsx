@@ -16,6 +16,8 @@ export const ConnectionStatus = ({ isConnected, lastSync, onSync, isLoading }: C
     return date.toLocaleTimeString();
   };
 
+  const isHttpsToHttpIssue = window.location.protocol === 'https:';
+
   return (
     <div className="flex items-center justify-between p-4 bg-card rounded-lg border shadow-soft">
       <div className="flex items-center gap-3">
@@ -39,6 +41,11 @@ export const ConnectionStatus = ({ isConnected, lastSync, onSync, isLoading }: C
           </div>
           <div className="text-sm text-muted-foreground">
             Last sync: {formatLastSync(lastSync)}
+            {isHttpsToHttpIssue && !isConnected && (
+              <div className="text-xs text-destructive mt-1">
+                HTTPS→HTTP blocked. Run locally or enable HTTPS on ESP8266
+              </div>
+            )}
           </div>
         </div>
       </div>

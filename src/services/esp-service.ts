@@ -42,6 +42,13 @@ export class ESPService {
     } catch (error) {
       console.error('Failed to get data from ESP:', error);
       console.error('ESP URL attempted:', this.baseUrl);
+      
+      // Check if it's a CORS/Mixed content issue
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        console.error('CORS/Mixed Content Error: HTTPS site cannot connect to HTTP ESP8266');
+        console.error('Solutions: 1) Run app locally on HTTP, 2) Enable HTTPS on ESP8266, 3) Check ESP8266 CORS headers');
+      }
+      
       return null;
     }
   }
