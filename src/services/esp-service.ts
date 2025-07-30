@@ -1,4 +1,12 @@
 import { PillData } from '@/types/pill-monitor';
+import { CapacitorHttp } from '@capacitor/core';
+
+// Check if running in native app
+const isNative = () => {
+  return typeof window !== 'undefined' && 
+         (window as any).Capacitor && 
+         (window as any).Capacitor.isNativePlatform();
+};
 
 export class ESPService {
   private baseUrl: string;
@@ -30,23 +38,40 @@ export class ESPService {
   async getData(): Promise<PillData | null> {
     try {
       console.log('Attempting to connect to ESP at:', this.baseUrl);
-      const response = await fetch(`${this.baseUrl}/getdata`);
-      console.log('ESP response status:', response.status, response.statusText);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('ESP data received:', data);
-        return data;
+      
+      let response;
+      if (isNative()) {
+        // Use Capacitor HTTP for native apps (bypasses CORS)
+        response = await CapacitorHttp.get({
+          url: `${this.baseUrl}/getdata`,
+          headers: {},
+        });
+        console.log('ESP response (native):', response.status);
+        if (response.status === 200) {
+          console.log('ESP data received:', response.data);
+          return response.data;
+        }
+      } else {
+        // Use regular fetch for web
+        const fetchResponse = await fetch(`${this.baseUrl}/getdata`);
+        console.log('ESP response status:', fetchResponse.status, fetchResponse.statusText);
+        if (fetchResponse.ok) {
+          const data = await fetchResponse.json();
+          console.log('ESP data received:', data);
+          return data;
+        }
       }
-      console.error('ESP response not ok:', response.status, response.statusText);
+      
+      console.error('ESP response not ok');
       return null;
     } catch (error) {
       console.error('Failed to get data from ESP:', error);
       console.error('ESP URL attempted:', this.baseUrl);
       
       // Check if it's a CORS/Mixed content issue
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      if (!isNative() && error instanceof TypeError && error.message === 'Failed to fetch') {
         console.error('CORS/Mixed Content Error: HTTPS site cannot connect to HTTP ESP8266');
-        console.error('Solutions: 1) Run app locally on HTTP, 2) Enable HTTPS on ESP8266, 3) Check ESP8266 CORS headers');
+        console.error('Solutions: 1) Use native mobile app, 2) Run locally on HTTP, 3) Enable HTTPS on ESP8266');
       }
       
       return null;
