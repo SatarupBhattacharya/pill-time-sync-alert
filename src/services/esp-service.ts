@@ -29,13 +29,19 @@ export class ESPService {
 
   async getData(): Promise<PillData | null> {
     try {
+      console.log('Attempting to connect to ESP at:', this.baseUrl);
       const response = await fetch(`${this.baseUrl}/getdata`);
+      console.log('ESP response status:', response.status, response.statusText);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        console.log('ESP data received:', data);
+        return data;
       }
+      console.error('ESP response not ok:', response.status, response.statusText);
       return null;
     } catch (error) {
-      console.error('Failed to get data:', error);
+      console.error('Failed to get data from ESP:', error);
+      console.error('ESP URL attempted:', this.baseUrl);
       return null;
     }
   }

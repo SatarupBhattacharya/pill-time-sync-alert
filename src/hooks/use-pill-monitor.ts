@@ -67,16 +67,20 @@ export const usePillMonitor = () => {
 
   const syncWithESP = useCallback(async () => {
     try {
+      console.log('Starting ESP sync...');
       const data = await espService.getData();
       if (data) {
+        console.log('ESP sync successful, data received');
         setPillData(data);
         setIsConnected(true);
         setLastSync(new Date());
         return true;
       }
+      console.log('ESP sync failed - no data received');
       setIsConnected(false);
       return false;
     } catch (error) {
+      console.error('ESP sync error:', error);
       setIsConnected(false);
       return false;
     }
