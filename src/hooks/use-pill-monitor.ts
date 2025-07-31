@@ -30,10 +30,8 @@ export const usePillMonitor = () => {
     vibration: true,
   });
 
-  const [espService] = useState(() => {
-  const savedIP = localStorage.getItem('esp-ip') || '192.168.1.100';
-  return new ESPService(savedIP);
-});
+const [espService] = useState(() => new ESPService());
+
 
   const [isConnected, setIsConnected] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
