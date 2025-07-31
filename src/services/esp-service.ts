@@ -16,7 +16,8 @@ export class ESPService {
   private baseUrl: string;
 
 constructor() {
-  this.baseUrl = 'http://192.168.29.185'; // Hardcoded ESP IP
+  this.baseUrl = 'http://192.168.29.185'; // ✅ Hardcoded IP
+  console.log('🚨 USING HARDCODED IP MODE:', this.baseUrl);
 }
 
 
