@@ -15,9 +15,8 @@ const isHTTPForced = () => {
 export class ESPService {
   private baseUrl: string;
 
-constructor(espIP: string = '192.168.1.100') {
-  const savedIP = localStorage.getItem('esp-ip') || espIP;
-  this.baseUrl = `http://${savedIP}`;
+constructor() {
+  this.baseUrl = 'http://192.168.29.185'; // Hardcoded ESP IP
 }
 
 
