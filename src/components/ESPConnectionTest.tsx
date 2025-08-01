@@ -13,7 +13,8 @@ export const ESPConnectionTest = () => {
     setIsLoading(true);
     setStatus('Testing...');
     
-    const espService = new ESPService(espIP);
+    const espService = new ESPService();
+    espService.setIPAddress(espIP);
     
     try {
       const data = await espService.getData();
