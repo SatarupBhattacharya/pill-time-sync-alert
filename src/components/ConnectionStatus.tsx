@@ -41,11 +41,6 @@ export const ConnectionStatus = ({ isConnected, lastSync, onSync, isLoading }: C
           </div>
           <div className="text-sm text-muted-foreground">
             Last sync: {formatLastSync(lastSync)}
-            {isHttpsToHttpIssue && !isConnected && (
-              <div className="text-xs text-destructive mt-1">
-                HTTPS→HTTP blocked. Run locally or enable HTTPS on ESP8266
-              </div>
-            )}
           </div>
         </div>
       </div>
