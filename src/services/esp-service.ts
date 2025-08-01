@@ -97,19 +97,9 @@ constructor() {
         }
       }
       
-      console.error('❌ ESP response not ok');
       return null;
     } catch (error) {
-      console.error('💥 Failed to connect to ESP:', error);
-      console.error('🔗 URL attempted:', this.baseUrl);
-      
-      // Provide clear guidance based on environment
-      if (!isNative() && !isHTTPForced()) {
-        console.error('🚫 CORS/Mixed Content Error: HTTPS website cannot connect to HTTP ESP8266');
-        console.error('💡 SOLUTION: Download the mobile app for direct ESP connection!');
-        console.error('📱 Mobile app bypasses browser security restrictions');
-      }
-      
+      // Silently handle connection errors to avoid console spam
       return null;
     }
   }
@@ -132,7 +122,7 @@ constructor() {
       }
       return '';
     } catch (error) {
-      console.error('Failed to get alert:', error);
+      // Silently handle connection errors
       return '';
     }
   }
