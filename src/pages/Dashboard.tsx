@@ -1,25 +1,49 @@
 import { useState, useEffect } from 'react';
-import { Settings, User, Bell, Smartphone } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Settings, 
+  User, 
+  Download, 
+  RefreshCw, 
+  Wifi, 
+  WifiOff,
+  Clock,
+  Pill,
+  Activity,
+  Heart,
+  FileText,
+  Calendar
+} from 'lucide-react';
 import { PillCard } from '@/components/PillCard';
 import { TimePickerDialog } from '@/components/TimePickerDialog';
 import { UserProfileDialog } from '@/components/UserProfileDialog';
-import { ConnectionStatus } from '@/components/ConnectionStatus';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import { ConnectionStatus } from '@/components/ConnectionStatus';
+import { MyProfile } from '@/components/MyProfile';
+import { DataHistory } from '@/components/DataHistory';
 import { usePillMonitor } from '@/hooks/use-pill-monitor';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import pillMonitorIcon from '@/assets/pill-monitor-icon.png';
 
 const Dashboard = () => {
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedDose, setSelectedDose] = useState<'breakfast' | 'lunch' | 'dinner'>('breakfast');
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+
   const {
     pillData,
     userProfile,
-    setUserProfile,
     notificationSettings,
-    setNotificationSettings,
     isConnected,
     lastSync,
+    setUserProfile,
+    setNotificationSettings,
     addMedicine,
     removeMedicine,
     updateMedicineCount,
@@ -28,27 +52,22 @@ const Dashboard = () => {
     syncWithESP,
     checkForAlerts,
     requestNotificationPermission,
-    espService,
+    espService
   } = usePillMonitor();
 
-  const [timeDialogOpen, setTimeDialogOpen] = useState(false);
-  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-  const [selectedDose, setSelectedDose] = useState<'breakfast' | 'lunch' | 'dinner'>('breakfast');
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-
-  // Auto-sync and check alerts every 30 seconds
+  // Auto-sync every 30 seconds when connected
   useEffect(() => {
-    const interval = setInterval(async () => {
-      await syncWithESP();
-      await checkForAlerts();
+    const interval = setInterval(() => {
+      if (isConnected) {
+        syncWithESP();
+        checkForAlerts();
+      }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [syncWithESP, checkForAlerts]);
+  }, [isConnected, syncWithESP, checkForAlerts]);
 
-  // Initial sync on mount
+  // Initial sync and permission request
   useEffect(() => {
     syncWithESP();
     requestNotificationPermission();
@@ -56,225 +75,264 @@ const Dashboard = () => {
 
   const handleTimeClick = (dose: 'breakfast' | 'lunch' | 'dinner') => {
     setSelectedDose(dose);
-    setTimeDialogOpen(true);
+    setShowTimePicker(true);
   };
 
-  const handleTimeUpdate = async (hour: number, minute: number) => {
-    await updateAlarmTime(selectedDose, hour, minute);
+  const handleTimeUpdate = (hour: number, minute: number) => {
+    const timeInMinutes = hour * 60 + minute;
+    updateAlarmTime(selectedDose, timeInMinutes);
   };
 
   const handleSync = async () => {
     setIsLoading(true);
-    const success = await syncWithESP();
-    if (!success) {
-      toast({
-        title: "Sync Failed",
-        description: "Could not connect to ESP8266. Check your connection.",
-        variant: "destructive"
-      });
+    try {
+      await syncWithESP();
+      toast.success('Synced with ESP device!');
+    } catch (error) {
+      toast.error('Failed to sync with device');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const installPWA = () => {
-    toast({
-      title: "📱 Install App",
-      description: "Use your browser's 'Add to Home Screen' option to install this app!",
-    });
+    toast.info('To install: tap the share button and select "Add to Home Screen"');
+  };
+
+  const getTotalPills = () => {
+    return Object.values(pillData.medicines).flat().reduce((total, medicine) => total + medicine.count, 0);
+  };
+
+  const getTotalMedicines = () => {
+    return Object.values(pillData.medicines).flat().length;
+  };
+
+  const getLowStockCount = () => {
+    return Object.values(pillData.medicines).flat().filter(medicine => medicine.count <= 2).length;
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src={pillMonitorIcon} alt="Pill Monitor" className="h-10 w-10" />
-          <div>
-            <h1 className="text-2xl font-bold text-primary">Pill Monitor</h1>
-            <p className="text-sm text-muted-foreground">
-              {userProfile.name ? `Patient: ${userProfile.name}` : 'Smart Medicine Tracker'}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={installPWA}
-            className="hidden sm:flex"
-          >
-            <Smartphone className="h-4 w-4 mr-2" />
-            Install
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSettingsDialogOpen(true)}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-          
-           <Button
-             variant="outline"
-             size="sm"
-             onClick={() => setProfileDialogOpen(true)}
-             className="gap-2"
-           >
-             <User className="h-4 w-4" />
-             <span className="hidden sm:inline">
-               {userProfile.name ? 'Edit Patient' : 'Add Patient'}
-             </span>
-           </Button>
-        </div>
-      </div>
-
-      {/* Connection Status */}
-      <ConnectionStatus
-        isConnected={isConnected}
-        lastSync={lastSync}
-        onSync={handleSync}
-        isLoading={isLoading}
-      />
-
-      {/* Welcome Card or Patient Setup Prompt */}
-      {userProfile.name ? (
-        <Card className="bg-gradient-medical text-white border-0 shadow-medical">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Bell className="h-8 w-8" />
-              <div>
-                <h2 className="text-xl font-semibold">Welcome back, {userProfile.name}!</h2>
-                <p className="text-white/90">Stay on track with your medication schedule.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-2 border-dashed border-primary/20 bg-primary/5">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <User className="h-8 w-8 text-primary" />
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold text-primary">Set Up Patient Profile</h2>
-                <p className="text-muted-foreground">Add patient details to personalize the medication tracking experience.</p>
-              </div>
-              <Button 
-                onClick={() => setProfileDialogOpen(true)}
-                className="ml-auto"
-              >
-                Add Patient Details
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Pill Cards Grid */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <PillCard
-          dose="breakfast"
-          medicines={pillData.medicines.breakfast}
-          alarmTime={pillData.alarmBreakfast}
-          onTimeClick={() => handleTimeClick('breakfast')}
-          onAddMedicine={(name) => addMedicine('breakfast', name)}
-          onRemoveMedicine={(id) => removeMedicine('breakfast', id)}
-          onUpdateMedicineCount={(id, increment) => updateMedicineCount('breakfast', id, increment)}
-        />
-        
-        <PillCard
-          dose="lunch"
-          medicines={pillData.medicines.lunch}
-          alarmTime={pillData.alarmLunch}
-          onTimeClick={() => handleTimeClick('lunch')}
-          onAddMedicine={(name) => addMedicine('lunch', name)}
-          onRemoveMedicine={(id) => removeMedicine('lunch', id)}
-          onUpdateMedicineCount={(id, increment) => updateMedicineCount('lunch', id, increment)}
-        />
-        
-        <PillCard
-          dose="dinner"
-          medicines={pillData.medicines.dinner}
-          alarmTime={pillData.alarmDinner}
-          onTimeClick={() => handleTimeClick('dinner')}
-          onAddMedicine={(name) => addMedicine('dinner', name)}
-          onRemoveMedicine={(id) => removeMedicine('dinner', id)}
-          onUpdateMedicineCount={(id, increment) => updateMedicineCount('dinner', id, increment)}
-        />
-      </div>
-
-      {/* Quick Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Quick Stats
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="container mx-auto p-4 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
+          <div className="flex items-center gap-4">
+            <img src={pillMonitorIcon} alt="Pill Monitor" className="w-12 h-12 rounded-lg" />
             <div>
-              <div className="text-2xl font-bold text-primary">
-                {pillData.medicines.breakfast.reduce((sum, med) => sum + med.count, 0) + 
-                 pillData.medicines.lunch.reduce((sum, med) => sum + med.count, 0) + 
-                 pillData.medicines.dinner.reduce((sum, med) => sum + med.count, 0)}
-              </div>
-              <div className="text-sm text-muted-foreground">Total Pills</div>
-            </div>
-            
-            <div>
-              <div className="text-2xl font-bold text-success">
-                {pillData.medicines.breakfast.length + pillData.medicines.lunch.length + pillData.medicines.dinner.length}
-              </div>
-              <div className="text-sm text-muted-foreground">Total Medicines</div>
-            </div>
-            
-            <div>
-              <div className="text-2xl font-bold text-medical-blue">
-                {[...pillData.medicines.breakfast, ...pillData.medicines.lunch, ...pillData.medicines.dinner]
-                  .filter(med => med.count < 3).length}
-              </div>
-              <div className="text-sm text-muted-foreground">Low Stock</div>
-            </div>
-            
-            <div>
-              <div className="text-2xl font-bold text-medical-orange">
-                {isConnected ? '✓' : '✗'}
-              </div>
-              <div className="text-sm text-muted-foreground">ESP Status</div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pill Monitor</h1>
+              {userProfile.name && (
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Welcome back, {userProfile.name}
+                </p>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setShowSettings(true)} variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+            <Button onClick={() => setShowProfile(true)} variant="outline" size="sm">
+              <User className="h-4 w-4 mr-2" />
+              Profile
+            </Button>
+            <Button onClick={installPWA} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Install
+            </Button>
+          </div>
+        </div>
 
-      {/* Dialogs */}
-      <TimePickerDialog
-        open={timeDialogOpen}
-        onOpenChange={setTimeDialogOpen}
-        dose={selectedDose}
-        currentTime={
-          selectedDose === 'breakfast' ? pillData.alarmBreakfast :
-          selectedDose === 'lunch' ? pillData.alarmLunch :
-          pillData.alarmDinner
-        }
-        onSave={handleTimeUpdate}
-      />
+        {/* Connection Status */}
+        <ConnectionStatus 
+          isConnected={isConnected} 
+          lastSync={lastSync}
+          onSync={handleSync}
+          isLoading={isLoading}
+        />
 
-      <UserProfileDialog
-        open={profileDialogOpen}
-        onOpenChange={setProfileDialogOpen}
-        profile={userProfile}
-        onSave={setUserProfile}
-      />
+        {/* Main Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <Pill className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              My Profile
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Data History
+            </TabsTrigger>
+          </TabsList>
 
-      <SettingsDialog
-        open={settingsDialogOpen}
-        onOpenChange={setSettingsDialogOpen}
-        notificationSettings={notificationSettings}
-        onNotificationSettingsChange={setNotificationSettings}
-        espService={espService}
-      />
+          <TabsContent value="overview" className="space-y-6">
+            {/* Welcome Message or Setup Prompt */}
+            {!userProfile.name ? (
+              <Card className="border-dashed border-2 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-4">
+                    <Heart className="h-12 w-12 mx-auto text-primary" />
+                    <div>
+                      <h3 className="text-lg font-semibold">Welcome to Pill Monitor!</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Let's get started by setting up your profile
+                      </p>
+                    </div>
+                    <Button onClick={() => setShowProfile(true)}>
+                      <User className="h-4 w-4 mr-2" />
+                      Set Up Profile
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary/10 p-3 rounded-full">
+                      <Heart className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Hello, {userProfile.name}!</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Your health companion is ready to help you stay on track
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Medicine Cards */}
+            <div className="grid gap-6 md:grid-cols-3">
+              <PillCard
+                dose="breakfast"
+                medicines={pillData.medicines.breakfast}
+                alarmTime={pillData.alarmBreakfast}
+                onTimeClick={() => handleTimeClick('breakfast')}
+                onAddMedicine={(name) => addMedicine('breakfast', { name, count: 6 })}
+                onRemoveMedicine={(id) => removeMedicine('breakfast', id)}
+                onUpdateMedicineCount={(id, increment) => {
+                  const medicine = pillData.medicines.breakfast.find(m => m.id === id);
+                  if (medicine) {
+                    const newCount = increment ? medicine.count + 1 : Math.max(0, medicine.count - 1);
+                    const action = increment ? 'increment' : (!increment && medicine.count > 0) ? 'taken' : 'decrement';
+                    updateMedicineCount('breakfast', id, newCount, action);
+                  }
+                }}
+              />
+              <PillCard
+                dose="lunch"
+                medicines={pillData.medicines.lunch}
+                alarmTime={pillData.alarmLunch}
+                onTimeClick={() => handleTimeClick('lunch')}
+                onAddMedicine={(name) => addMedicine('lunch', { name, count: 6 })}
+                onRemoveMedicine={(id) => removeMedicine('lunch', id)}
+                onUpdateMedicineCount={(id, increment) => {
+                  const medicine = pillData.medicines.lunch.find(m => m.id === id);
+                  if (medicine) {
+                    const newCount = increment ? medicine.count + 1 : Math.max(0, medicine.count - 1);
+                    const action = increment ? 'increment' : (!increment && medicine.count > 0) ? 'taken' : 'decrement';
+                    updateMedicineCount('lunch', id, newCount, action);
+                  }
+                }}
+              />
+              <PillCard
+                dose="dinner"
+                medicines={pillData.medicines.dinner}
+                alarmTime={pillData.alarmDinner}
+                onTimeClick={() => handleTimeClick('dinner')}
+                onAddMedicine={(name) => addMedicine('dinner', { name, count: 6 })}
+                onRemoveMedicine={(id) => removeMedicine('dinner', id)}
+                onUpdateMedicineCount={(id, increment) => {
+                  const medicine = pillData.medicines.dinner.find(m => m.id === id);
+                  if (medicine) {
+                    const newCount = increment ? medicine.count + 1 : Math.max(0, medicine.count - 1);
+                    const action = increment ? 'increment' : (!increment && medicine.count > 0) ? 'taken' : 'decrement';
+                    updateMedicineCount('dinner', id, newCount, action);
+                  }
+                }}
+              />
+            </div>
+
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Quick Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center space-y-2">
+                    <div className="text-2xl font-bold text-blue-600">{getTotalPills()}</div>
+                    <div className="text-sm text-muted-foreground">Total Pills</div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <div className="text-2xl font-bold text-green-600">{getTotalMedicines()}</div>
+                    <div className="text-sm text-muted-foreground">Medicines</div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <div className="text-2xl font-bold text-red-600">{getLowStockCount()}</div>
+                    <div className="text-sm text-muted-foreground">Low Stock</div>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <div className="flex items-center justify-center">
+                      {isConnected ? (
+                        <Wifi className="h-6 w-6 text-green-600" />
+                      ) : (
+                        <WifiOff className="h-6 w-6 text-red-600" />
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">ESP Status</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="profile">
+            <MyProfile 
+              profile={userProfile} 
+              onUpdateProfile={setUserProfile}
+            />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <DataHistory pillHistory={userProfile.pillHistory} />
+          </TabsContent>
+        </Tabs>
+
+        {/* Dialogs */}
+        <TimePickerDialog
+          open={showTimePicker}
+          onOpenChange={setShowTimePicker}
+          dose={selectedDose}
+          currentTime={
+            selectedDose === 'breakfast' ? pillData.alarmBreakfast :
+            selectedDose === 'lunch' ? pillData.alarmLunch :
+            pillData.alarmDinner
+          }
+          onSave={handleTimeUpdate}
+        />
+
+        <UserProfileDialog
+          open={showProfile}
+          onOpenChange={setShowProfile}
+          profile={userProfile}
+          onSave={setUserProfile}
+        />
+
+        <SettingsDialog
+          open={showSettings}
+          onOpenChange={setShowSettings}
+        />
+      </div>
     </div>
   );
 };

@@ -15,6 +15,23 @@ export interface PillData {
   alarmDinner: number;
 }
 
+export interface DoctorAppointment {
+  id: string;
+  doctorName: string;
+  date: string;
+  time: string;
+  notes?: string;
+}
+
+export interface PillHistoryEntry {
+  id: string;
+  medicineName: string;
+  count: number;
+  dose: 'breakfast' | 'lunch' | 'dinner';
+  timestamp: string;
+  action: 'taken' | 'added' | 'removed';
+}
+
 export interface UserProfile {
   name: string;
   age: number;
@@ -22,6 +39,8 @@ export interface UserProfile {
   phone: string;
   doctorName: string;
   emergencyContact: string;
+  appointments: DoctorAppointment[];
+  pillHistory: PillHistoryEntry[];
 }
 
 export interface DoseTime {

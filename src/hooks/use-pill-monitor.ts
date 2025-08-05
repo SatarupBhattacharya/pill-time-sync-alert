@@ -22,6 +22,8 @@ export const usePillMonitor = () => {
     phone: '',
     doctorName: '',
     emergencyContact: '',
+    appointments: [],
+    pillHistory: []
   });
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
@@ -88,11 +90,26 @@ const [espService] = useState(() => new ESPService());
     }
   }, [espService]);
 
-  const addMedicine = useCallback((dose: 'breakfast' | 'lunch' | 'dinner', name: string) => {
-    const newMedicine: Medicine = {
+  const addPillHistory = useCallback((medicineName: string, count: number, dose: 'breakfast' | 'lunch' | 'dinner', action: 'taken' | 'added' | 'removed') => {
+    const historyEntry = {
       id: Date.now().toString(),
-      name,
-      count: 6,
+      medicineName,
+      count,
+      dose,
+      timestamp: new Date().toISOString(),
+      action
+    };
+
+    setUserProfile(prev => ({
+      ...prev,
+      pillHistory: [...prev.pillHistory, historyEntry]
+    }));
+  }, []);
+
+  const addMedicine = useCallback((dose: 'breakfast' | 'lunch' | 'dinner', medicine: Omit<Medicine, 'id'>) => {
+    const newMedicine: Medicine = {
+      ...medicine,
+      id: Date.now().toString()
     };
     
     setPillData(prev => ({
@@ -102,9 +119,16 @@ const [espService] = useState(() => new ESPService());
         [dose]: [...prev.medicines[dose], newMedicine],
       },
     }));
-  }, []);
+
+    addPillHistory(medicine.name, medicine.count, dose, 'added');
+  }, [addPillHistory]);
 
   const removeMedicine = useCallback((dose: 'breakfast' | 'lunch' | 'dinner', medicineId: string) => {
+    const medicine = pillData.medicines[dose].find(m => m.id === medicineId);
+    if (medicine) {
+      addPillHistory(medicine.name, medicine.count, dose, 'removed');
+    }
+
     setPillData(prev => ({
       ...prev,
       medicines: {
@@ -112,13 +136,18 @@ const [espService] = useState(() => new ESPService());
         [dose]: prev.medicines[dose].filter(med => med.id !== medicineId),
       },
     }));
-  }, []);
+  }, [pillData.medicines, addPillHistory]);
 
-  const updateMedicineCount = useCallback(async (dose: 'breakfast' | 'lunch' | 'dinner', medicineId: string, increment: boolean) => {
+  const updateMedicineCount = useCallback((dose: 'breakfast' | 'lunch' | 'dinner', medicineId: string, newCount: number, action: 'increment' | 'decrement' | 'taken') => {
+    const medicine = pillData.medicines[dose].find(m => m.id === medicineId);
+    if (medicine && action === 'taken') {
+      addPillHistory(medicine.name, 1, dose, 'taken');
+    }
+
     setPillData(prev => {
       const updatedMedicines = prev.medicines[dose].map(med => {
         if (med.id === medicineId) {
-          const newCount = Math.max(0, increment ? med.count + 1 : med.count - 1);
+          const updatedMedicine = { ...med, count: newCount };
           
           if (newCount < 3 && med.count >= 3) {
             toast({
@@ -128,7 +157,7 @@ const [espService] = useState(() => new ESPService());
             });
           }
           
-          return { ...med, count: newCount };
+          return updatedMedicine;
         }
         return med;
       });
@@ -141,49 +170,31 @@ const [espService] = useState(() => new ESPService());
         },
       };
     });
-  }, [toast]);
+  }, [pillData.medicines, addPillHistory, toast]);
 
-  const updateAllMedicinesForDose = useCallback(async (dose: 'breakfast' | 'lunch' | 'dinner') => {
-    // This function is called when sensor is touched - decreases all medicines for the dose by 1
-    setPillData(prev => {
-      const updatedMedicines = prev.medicines[dose].map(med => {
-        const newCount = Math.max(0, med.count - 1);
-        
-        if (newCount < 3) {
-          toast({
-            title: "⚠️ Low Pill Count",
-            description: `${med.name} is running low! Please refill.`,
-            variant: "destructive"
-          });
-        }
-        
-        return { ...med, count: newCount };
-      });
+  const updateAllMedicinesForDose = useCallback((dose: 'breakfast' | 'lunch' | 'dinner', medicines: Medicine[]) => {
+    setPillData(prev => ({
+      ...prev,
+      medicines: {
+        ...prev.medicines,
+        [dose]: medicines
+      }
+    }));
+  }, []);
 
-      return {
-        ...prev,
-        medicines: {
-          ...prev.medicines,
-          [dose]: updatedMedicines,
-        },
-      };
+  const updateAlarmTime = useCallback((dose: 'breakfast' | 'lunch' | 'dinner', timeInMinutes: number) => {
+    const alarmKey = `alarm${dose.charAt(0).toUpperCase() + dose.slice(1)}` as keyof PillData;
+    
+    setPillData(prev => ({ ...prev, [alarmKey]: timeInMinutes }));
+    
+    const hour = Math.floor(timeInMinutes / 60);
+    const minute = timeInMinutes % 60;
+    
+    toast({
+      title: "⏰ Alarm Updated",
+      description: `${dose.charAt(0).toUpperCase() + dose.slice(1)} alarm set to ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
     });
   }, [toast]);
-
-  const updateAlarmTime = useCallback(async (dose: 'breakfast' | 'lunch' | 'dinner', hour: number, minute: number) => {
-    const doseMap = { breakfast: 1, lunch: 2, dinner: 3 };
-    const alarmKey = `alarm${dose.charAt(0).toUpperCase() + dose.slice(1)}` as keyof PillData;
-    const alarmTime = hour * 100 + minute;
-    
-    const success = await espService.setAlarm(doseMap[dose], hour, minute);
-    if (success || !isConnected) {
-      setPillData(prev => ({ ...prev, [alarmKey]: alarmTime }));
-      toast({
-        title: "⏰ Alarm Updated",
-        description: `${dose.charAt(0).toUpperCase() + dose.slice(1)} alarm set to ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-      });
-    }
-  }, [espService, isConnected, toast]);
 
   const checkForAlerts = useCallback(async () => {
     const alert = await espService.getAlert();
@@ -203,12 +214,7 @@ const [espService] = useState(() => new ESPService());
         });
       } else if (alert.includes('taken')) {
         // Medicine was taken - update pill counts
-        const doseMatch = alert.match(/(morning|lunch|dinner)/i);
-        if (doseMatch) {
-          const alertDose = doseMatch[1].toLowerCase();
-          const mappedDose = alertDose === 'morning' ? 'breakfast' : alertDose as 'lunch' | 'dinner';
-          await updateAllMedicinesForDose(mappedDose);
-        }
+        // Medicine was taken alert handling can be added here if needed
         
         toast({
           title: "✅ Medicine Taken",
@@ -230,7 +236,7 @@ const [espService] = useState(() => new ESPService());
         });
       }
     }
-  }, [espService, notificationSettings.enabled, toast, updateAllMedicinesForDose]);
+  }, [espService, notificationSettings.enabled, toast]);
 
   const requestNotificationPermission = useCallback(async () => {
     if ('Notification' in window) {
