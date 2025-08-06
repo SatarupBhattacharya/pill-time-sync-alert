@@ -49,7 +49,13 @@ const [espService] = useState(() => new ESPService());
       setPillData(JSON.parse(savedPillData));
     }
     if (savedUserProfile) {
-      setUserProfile(JSON.parse(savedUserProfile));
+      const profile = JSON.parse(savedUserProfile);
+      // Ensure new properties exist for backward compatibility
+      setUserProfile({
+        ...profile,
+        doctorAppointments: profile.doctorAppointments || [],
+        pillHistory: profile.pillHistory || [],
+      });
     }
     if (savedNotificationSettings) {
       setNotificationSettings(JSON.parse(savedNotificationSettings));
