@@ -103,21 +103,76 @@ export const MyProfile = ({ profile, onUpdateProfile }: MyProfileProps) => {
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
-            {isEditing ? (
-              <Input
-                id="name"
-                value={editedProfile.name}
-                onChange={(e) => setEditedProfile(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter your full name"
-              />
-            ) : (
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.name || 'Not set'}</span>
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
+              {isEditing ? (
+                <Input
+                  id="name"
+                  value={editedProfile.name}
+                  onChange={(e) => setEditedProfile(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter your full name"
+                />
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{profile.name || 'Not set'}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
+              {isEditing ? (
+                <Input
+                  id="phone"
+                  value={editedProfile.phone}
+                  onChange={(e) => setEditedProfile(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Enter your phone number"
+                />
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{profile.phone || 'Not set'}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+              {isEditing ? (
+                <Input
+                  id="email"
+                  type="email"
+                  value={editedProfile.email}
+                  onChange={(e) => setEditedProfile(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Enter your email"
+                />
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>{profile.email || 'Not set'}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="age" className="text-sm font-medium">Age</Label>
+              {isEditing ? (
+                <Input
+                  id="age"
+                  type="number"
+                  value={editedProfile.age || ''}
+                  onChange={(e) => setEditedProfile(prev => ({ ...prev, age: parseInt(e.target.value) || 0 }))}
+                  placeholder="Enter your age"
+                />
+              ) : (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>{profile.age ? `${profile.age} years` : 'Not set'}</span>
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
