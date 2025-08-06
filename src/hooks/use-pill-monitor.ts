@@ -17,11 +17,6 @@ export const usePillMonitor = () => {
   
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: '',
-    age: 0,
-    email: '',
-    phone: '',
-    doctorName: '',
-    emergencyContact: '',
     doctorAppointments: [],
     pillHistory: [],
   });

@@ -35,11 +35,6 @@ export interface PillHistoryEntry {
 
 export interface UserProfile {
   name: string;
-  age: number;
-  email: string;
-  phone: string;
-  doctorName: string;
-  emergencyContact: string;
   doctorAppointments: DoctorAppointment[];
   pillHistory: PillHistoryEntry[];
 }
