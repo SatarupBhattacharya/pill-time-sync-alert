@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { PillData, UserProfile, NotificationSettings, Medicine } from '@/types/pill-monitor';
+import { PillData, UserProfile, NotificationSettings, Medicine, PillHistoryEntry } from '@/types/pill-monitor';
 import { ESPService } from '@/services/esp-service';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,6 +22,8 @@ export const usePillMonitor = () => {
     phone: '',
     doctorName: '',
     emergencyContact: '',
+    doctorAppointments: [],
+    pillHistory: [],
   });
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
@@ -88,6 +90,19 @@ const [espService] = useState(() => new ESPService());
     }
   }, [espService]);
 
+  const addHistoryEntry = useCallback((entry: Omit<PillHistoryEntry, 'id' | 'timestamp'>) => {
+    const historyEntry: PillHistoryEntry = {
+      ...entry,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+    };
+    
+    setUserProfile(prev => ({
+      ...prev,
+      pillHistory: [...prev.pillHistory, historyEntry],
+    }));
+  }, []);
+
   const addMedicine = useCallback((dose: 'breakfast' | 'lunch' | 'dinner', name: string) => {
     const newMedicine: Medicine = {
       id: Date.now().toString(),
@@ -102,23 +117,47 @@ const [espService] = useState(() => new ESPService());
         [dose]: [...prev.medicines[dose], newMedicine],
       },
     }));
-  }, []);
+
+    addHistoryEntry({
+      medicineName: name,
+      dose,
+      action: 'added',
+    });
+  }, [addHistoryEntry]);
 
   const removeMedicine = useCallback((dose: 'breakfast' | 'lunch' | 'dinner', medicineId: string) => {
-    setPillData(prev => ({
-      ...prev,
-      medicines: {
-        ...prev.medicines,
-        [dose]: prev.medicines[dose].filter(med => med.id !== medicineId),
-      },
-    }));
-  }, []);
+    let removedMedicine: Medicine | undefined;
+    
+    setPillData(prev => {
+      removedMedicine = prev.medicines[dose].find(med => med.id === medicineId);
+      return {
+        ...prev,
+        medicines: {
+          ...prev.medicines,
+          [dose]: prev.medicines[dose].filter(med => med.id !== medicineId),
+        },
+      };
+    });
+
+    if (removedMedicine) {
+      addHistoryEntry({
+        medicineName: removedMedicine.name,
+        dose,
+        action: 'removed',
+      });
+    }
+  }, [addHistoryEntry]);
 
   const updateMedicineCount = useCallback(async (dose: 'breakfast' | 'lunch' | 'dinner', medicineId: string, increment: boolean) => {
+    let updatedMedicine: { name: string; oldCount: number; newCount: number } | undefined;
+    
     setPillData(prev => {
       const updatedMedicines = prev.medicines[dose].map(med => {
         if (med.id === medicineId) {
+          const oldCount = med.count;
           const newCount = Math.max(0, increment ? med.count + 1 : med.count - 1);
+          
+          updatedMedicine = { name: med.name, oldCount, newCount };
           
           if (newCount < 3 && med.count >= 3) {
             toast({
@@ -141,13 +180,26 @@ const [espService] = useState(() => new ESPService());
         },
       };
     });
-  }, [toast]);
+
+    if (updatedMedicine) {
+      addHistoryEntry({
+        medicineName: updatedMedicine.name,
+        dose,
+        action: 'count_updated',
+        oldCount: updatedMedicine.oldCount,
+        newCount: updatedMedicine.newCount,
+      });
+    }
+  }, [toast, addHistoryEntry]);
 
   const updateAllMedicinesForDose = useCallback(async (dose: 'breakfast' | 'lunch' | 'dinner') => {
     // This function is called when sensor is touched - decreases all medicines for the dose by 1
+    let takenMedicines: string[] = [];
+    
     setPillData(prev => {
       const updatedMedicines = prev.medicines[dose].map(med => {
         const newCount = Math.max(0, med.count - 1);
+        takenMedicines.push(med.name);
         
         if (newCount < 3) {
           toast({
@@ -168,7 +220,16 @@ const [espService] = useState(() => new ESPService());
         },
       };
     });
-  }, [toast]);
+
+    // Add history entries for all taken medicines
+    takenMedicines.forEach(medicineName => {
+      addHistoryEntry({
+        medicineName,
+        dose,
+        action: 'taken',
+      });
+    });
+  }, [toast, addHistoryEntry]);
 
   const updateAlarmTime = useCallback(async (dose: 'breakfast' | 'lunch' | 'dinner', hour: number, minute: number) => {
     const doseMap = { breakfast: 1, lunch: 2, dinner: 3 };
